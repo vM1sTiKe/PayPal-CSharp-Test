@@ -1,4 +1,5 @@
 ﻿using System.Text.Json.Nodes;
+using Azure;
 using Microsoft.AspNetCore.Mvc;
 
 namespace PayPal_Test.Controllers
@@ -47,7 +48,7 @@ namespace PayPal_Test.Controllers
         /// <summary>
         /// Queries PayPal API to create a Api Token for the application
         /// </summary>
-        public async Task<bool> CreateApiToken()
+        private async Task<bool> CreateApiToken()
         {
             var fetch_uri = config["PayPalSettings:Url"] + "/v1/oauth2/token";
             var fetch_content = new FormUrlEncodedContent(new Dictionary<string, string> {
@@ -103,5 +104,38 @@ namespace PayPal_Test.Controllers
             if (await this.CreateApiToken()) return true;
             throw new Exception("Cannot create PayPal Api Token");
         }
+
+        public async Task<JsonNode> CreateUserToken(string tokenId)
+        {
+            await this.ValidateApiToken();
+
+            var fetch_uri = config["PayPalSettings:Url"] + "/v3/vault/payment-tokens";
+            var fetch_content = JsonContent.Create(new
+            {
+                payment_source = new
+                {
+                    token = new
+                    {
+                        id = "3LU32795BF5999742", //id = tokenId,
+                        type = "SETUP_TOKEN"
+                    }
+                }
+            });
+
+            var response = await new Helpers.Http(config, fetch_uri).Post(fetch_content);
+            return JsonNode.Parse(response);
+        }
+
+        public async Task<bool> DeletePaymentToken(string paymentTokenId)
+        {
+            await this.ValidateApiToken();
+
+            var fetch_uri = config["PayPalSettings:Url"] + "/v3/vault/payment-tokens/" + paymentTokenId;
+            var response = await new Helpers.Http(config, fetch_uri).Post(null);
+
+            return true;
+        }
+
+
     }
 }
