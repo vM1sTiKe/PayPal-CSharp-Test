@@ -136,6 +136,33 @@ namespace PayPal_Test.Controllers
             return true;
         }
 
+        public async Task<JsonNode> PayUserVaulted(string paymentTokenId, float price)
+        {
+            await this.ValidateApiToken();
 
+            var fetch_uri = config["PayPalSettings:Url"] + "/v2/checkout/orders";
+            var fetch_content = JsonContent.Create(new
+            {
+                intent = "CAPTURE",
+                payment_source = new
+                {
+                    paypal = new
+                    {
+                        vault_id = paymentTokenId,
+                    }
+                },
+                purchase_units = new
+                {
+                    amount = new
+                    {
+                        currency_code = "usd",
+                        value = price
+                    }
+                }
+            });
+
+            var response = await new Helpers.Http(config, fetch_uri).Post(fetch_content);
+            return JsonNode.Parse(response);
+        }
     }
 }
