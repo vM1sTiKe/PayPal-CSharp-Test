@@ -1,15 +1,13 @@
-﻿using System.Text;
-using System.Text.Json.Nodes;
-using System.Text.RegularExpressions;
+﻿using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.Mvc;
 
 namespace PayPal_Test.Controllers
 {
-    public class PayPalController(PayPal_Test.Data.Context context, IConfiguration config) : Controller
+    public class PayPalController(IConfiguration config) : Controller
     {
-        public async Task<object> Index()
+        public async Task<JsonResult> Index()
         {
-            return await this.CreateApiToken();
+            return Json(new { da = "da" }); ;
         }
 
         public async Task<JsonResult> OAuth()
@@ -27,8 +25,7 @@ namespace PayPal_Test.Controllers
             // Only after procceed with logic
 
             var fetch_uri = config["PayPalSettings:Url"] + "/v3/vault/setup-tokens";
-            // Create json to be used on the endpoint
-            var fetch_content = Json(new {
+            var fetch_content = JsonContent.Create(new {
                 payment_source = new {
                     paypal = new {
                         permit_multiple_payment_tokens = true, usage_pattern = "IMMEDIATE", usage_type = "MERCHANT", customer_type = "CONSUMER",
@@ -39,8 +36,8 @@ namespace PayPal_Test.Controllers
                         }
                     }
                 }
-            }).Value;
-            var response = await new Helpers.Http(config, fetch_uri).Post(JsonContent.Create(fetch_content));
+            });
+            var response = await new Helpers.Http(config, fetch_uri).Post(fetch_content);
 
             // Json parses the response
             return JsonNode.Parse(response);
@@ -72,7 +69,6 @@ namespace PayPal_Test.Controllers
 
             // Save the token
             config["PayPalSettings:APIToken"] = token;
-            var a = config["PayPalSettings:APIToken"];
             return true;
         }
 

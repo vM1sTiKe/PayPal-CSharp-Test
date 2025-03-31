@@ -1,9 +1,5 @@
-﻿using System.Diagnostics;
-using System.Text;
-using System.Text.Json.Nodes;
-using System.Text.RegularExpressions;
+﻿using System.Text;
 using Microsoft.AspNetCore.Components;
-using Microsoft.Extensions.Configuration;
 
 namespace PayPal_Test.Helpers
 {
@@ -11,32 +7,35 @@ namespace PayPal_Test.Helpers
     {
         private bool _disposed;
         private readonly HttpClient _client;
-        private IConfiguration _config;
+        private readonly IConfiguration _config;
 
         public Http(IConfiguration configuration, string uri)
         {
             this._config = configuration;
-
             // Create the Http Client
-            this._client = new HttpClient
-            {
-                BaseAddress = new Uri(uri)
-            };
+            this._client = new HttpClient { BaseAddress = new Uri(uri) };
         }
 
+
+        /// <summary>
+        /// Takes care of the request
+        /// </summary>
+        /// <returns>Request response</returns>
         private async Task<HttpResponseMessage> Request(HttpMethod method, HttpContent? content)
         {
-            var request = new HttpRequestMessage(method, this._client.BaseAddress)
-            {
-                Content = content
-            };
+            // Cannot execute another request with the same HttpClient
+            if (this._disposed) throw new Exception("Cannot use the same Http Client");
 
+            // Creates the request with the given properties
+            var request = new HttpRequestMessage(method, this._client.BaseAddress) { Content = content };
+            // Executes the request
             return await _client.SendAsync(request);
         }
 
         /// <summary>
-        /// Takes care of the response of the Fetch and returns the response content as a string
+        /// Takes care of the response
         /// </summary>
+        /// <returns>String with the JSON response</returns>
         private async Task<string> Response(HttpResponseMessage response)
         {
             // After usage dispose of the client
@@ -52,14 +51,10 @@ namespace PayPal_Test.Helpers
         }
 
         /// <summary>
-        /// Executes a Post with Basic Authorization
+        /// Executes a Post request with basic authorization
         /// </summary>
-        /// <param name="content"></param>
-        /// <returns>Json response or empty Json in case of error</returns>
         public async Task<string> BasicPost(HttpContent content)
         {
-            if (this._disposed) throw new Exception("Cannot use the same Http Client");
-
             // Create the basic Authorization string
             var basic_auth = Convert.ToBase64String(Encoding.UTF8.GetBytes(this._config["PayPalSettings:ClientId"] + ":" + this._config["PayPalSettings:ClientSecret"]));
             // Add the basic Authorization Header
@@ -70,10 +65,11 @@ namespace PayPal_Test.Helpers
             return await this.Response(response);
         }
 
+        /// <summary>
+        /// Executes a Get request with the given content
+        /// </summary>
         public async Task<string> Get(HttpContent? content = null)
         {
-            if (this._disposed) throw new Exception("Cannot use the same Http Client");
-
             // Add Headers
             this._client.DefaultRequestHeaders.Add("Authorization", "Bearer " + this._config["PayPalSettings:APIToken"]);
             this._client.DefaultRequestHeaders.Add("ContentType", "application/json");
@@ -83,6 +79,9 @@ namespace PayPal_Test.Helpers
             return await this.Response(response);
         }
 
+        /// <summary>
+        /// Executes a Post request with the given content
+        /// </summary>
         public async Task<string> Post(HttpContent? content = null)
         {
             if (this._disposed) throw new Exception("Cannot use the same Http Client");
